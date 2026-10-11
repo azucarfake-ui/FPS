@@ -1,0 +1,76 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local lp = Players.LocalPlayer
+local setFpsCounter
+local Stats = game:GetService("Stats")
+local gui, label, beatConn, dragConn
+
+local function build()
+	local okHui, hui = pcall(function() return gethui and gethui() end)
+	gui = Instance.new("ScreenGui")
+	gui.Name = "FPSCounterUI"
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 998
+	gui.Parent = (okHui and hui) or lp:WaitForChild("PlayerGui")
+
+	local pill = Instance.new("Frame")
+	pill.Size = UDim2.new(0, 150, 0, 26)
+	pill.AnchorPoint = Vector2.new(0.5, 0)
+	pill.Position = UDim2.new(0.5, 0, 0, 20)
+	pill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	pill.Parent = gui
+	Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
+	local stroke = Instance.new("UIStroke", pill)
+	stroke.Color = Color3.fromRGB(255, 150, 200)
+	stroke.Thickness = 1.5
+
+	label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 12
+	label.TextColor3 = Color3.fromRGB(20, 20, 20)
+	label.Text = "FPS --  |  -- ms"
+	label.Parent = pill
+
+	local dragging, dragStart, startPos
+	pill.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging, dragStart, startPos = true, input.Position, pill.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+	dragConn = UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local d = input.Position - dragStart
+			pill.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+		end
+	end)
+end
+
+setFpsCounter = function(on)
+	if on then
+		if gui then return end
+		build()
+		local frames, acc = 0, 0
+		beatConn = RunService.Heartbeat:Connect(function(dt)
+			frames = frames + 1
+			acc = acc + dt
+			if acc >= 0.5 then
+				local ping = 0
+				pcall(function() ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue() end)
+				label.Text = string.format("FPS %d  |  %d ms", math.floor(frames / acc + 0.5), math.floor(ping + 0.5))
+				frames, acc = 0, 0
+			end
+		end)
+	else
+		if beatConn then beatConn:Disconnect(); beatConn = nil end
+		if dragConn then dragConn:Disconnect(); dragConn = nil end
+		if gui then gui:Destroy(); gui, label = nil, nil end
+	end
+end
+_J.hooks[#_J.hooks + 1] = function() setFpsCounter(false) end
+return setFpsCounter

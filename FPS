@@ -72,5 +72,4 @@ setFpsCounter = function(on)
 		if gui then gui:Destroy(); gui, label = nil, nil end
 	end
 end
-_J.hooks[#_J.hooks + 1] = function() setFpsCounter(false) end
 return setFpsCounter

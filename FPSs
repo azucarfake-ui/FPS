@@ -18,11 +18,11 @@ local function build()
 	pill.Size = UDim2.new(0, 150, 0, 26)
 	pill.AnchorPoint = Vector2.new(0.5, 0)
 	pill.Position = UDim2.new(0.5, 0, 0, 20)
-	pill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	pill.BackgroundColor3 = Color3.fromRGB(47, 59, 42)
 	pill.Parent = gui
 	Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
 	local stroke = Instance.new("UIStroke", pill)
-	stroke.Color = Color3.fromRGB(255, 150, 200)
+	stroke.Color = Color3.fromRGB(107, 143, 78)
 	stroke.Thickness = 1.5
 
 	label = Instance.new("TextLabel")
@@ -30,7 +30,7 @@ local function build()
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 12
-	label.TextColor3 = Color3.fromRGB(20, 20, 20)
+	label.TextColor3 = Color3.fromRGB(226, 232, 208)
 	label.Text = "FPS --  |  -- ms"
 	label.Parent = pill
 

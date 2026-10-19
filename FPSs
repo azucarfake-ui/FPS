@@ -1,38 +1,89 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local lp = Players.LocalPlayer
-local setFpsCounter
 local Stats = game:GetService("Stats")
-local gui, label, beatConn, dragConn
+local lp = Players.LocalPlayer
+
+local BG, LINE = Color3.fromRGB(22, 14, 34), Color3.fromRGB(110, 66, 170)
+local TXT, EYE = Color3.fromRGB(236, 226, 255), Color3.fromRGB(230, 40, 72)
+
+local env = getgenv and getgenv() or _G
+if env.GengarFpsCleanup then pcall(env.GengarFpsCleanup) end
+
+local gui, label, beatConn, dragConn, alive
+
+local function eyePair(parent, w, x)
+	local holder = Instance.new("Frame")
+	holder.BackgroundTransparency = 1
+	holder.AnchorPoint = Vector2.new(0, 0.5)
+	holder.Position = UDim2.new(0, x, 0.5, 0)
+	holder.Size = UDim2.fromOffset(w * 2 + 5, w)
+	holder.Parent = parent
+	local eyes = {}
+	for i, side in ipairs({ 1, -1 }) do
+		local eye = Instance.new("Frame")
+		eye.BackgroundColor3 = EYE
+		eye.BorderSizePixel = 0
+		eye.AnchorPoint = Vector2.new(0.5, 0.5)
+		eye.Position = UDim2.new(i == 1 and 0.25 or 0.75, 0, 0.5, 0)
+		eye.Size = UDim2.fromOffset(w, w * 0.6)
+		eye.Rotation = side * 16
+		eye.Parent = holder
+		Instance.new("UICorner", eye).CornerRadius = UDim.new(0.45, 0)
+		local pupil = Instance.new("Frame")
+		pupil.BackgroundColor3 = Color3.new(1, 1, 1)
+		pupil.BorderSizePixel = 0
+		pupil.AnchorPoint = Vector2.new(0.5, 0.5)
+		pupil.Position = UDim2.new(0.5, 0, 0.5, 0)
+		pupil.Size = UDim2.fromOffset(2, w * 0.4)
+		pupil.Parent = eye
+		eyes[i] = eye
+	end
+	return holder, eyes, w
+end
 
 local function build()
 	local okHui, hui = pcall(function() return gethui and gethui() end)
 	gui = Instance.new("ScreenGui")
-	gui.Name = "FPSCounterUI"
+	gui.Name = "GengarFpsUI"
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 998
 	gui.Parent = (okHui and hui) or lp:WaitForChild("PlayerGui")
 
 	local pill = Instance.new("Frame")
-	pill.Size = UDim2.new(0, 150, 0, 26)
+	pill.Size = UDim2.new(0, 176, 0, 28)
 	pill.AnchorPoint = Vector2.new(0.5, 0)
 	pill.Position = UDim2.new(0.5, 0, 0, 20)
-	pill.BackgroundColor3 = Color3.fromRGB(47, 59, 42)
+	pill.BackgroundColor3 = BG
 	pill.Parent = gui
 	Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
 	local stroke = Instance.new("UIStroke", pill)
-	stroke.Color = Color3.fromRGB(107, 143, 78)
+	stroke.Color = LINE
 	stroke.Thickness = 1.5
 
+	local _, eyes, w = eyePair(pill, 11, 10)
+
 	label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 1, 0)
+	label.Position = UDim2.new(0, 38, 0, 0)
+	label.Size = UDim2.new(1, -46, 1, 0)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 12
-	label.TextColor3 = Color3.fromRGB(226, 232, 208)
+	label.TextColor3 = TXT
+	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Text = "FPS --  |  -- ms"
 	label.Parent = pill
+
+	-- parpadeo
+	task.spawn(function()
+		while alive and gui do
+			task.wait(math.random(30, 70) / 10)
+			if not (alive and gui) then break end
+			for _, e in ipairs(eyes) do e.Size = UDim2.fromOffset(w, 2) end
+			task.wait(0.12)
+			for _, e in ipairs(eyes) do e.Size = UDim2.fromOffset(w, w * 0.6) end
+		end
+	end)
 
 	local dragging, dragStart, startPos
 	pill.InputBegan:Connect(function(input)
@@ -51,25 +102,35 @@ local function build()
 	end)
 end
 
-setFpsCounter = function(on)
+local function stop()
+	alive = false
+	if beatConn then beatConn:Disconnect() beatConn = nil end
+	if dragConn then dragConn:Disconnect() dragConn = nil end
+	if gui then gui:Destroy() gui, label = nil, nil end
+end
+
+local function set(on)
 	if on then
 		if gui then return end
+		alive = true
 		build()
 		local frames, acc = 0, 0
 		beatConn = RunService.Heartbeat:Connect(function(dt)
 			frames = frames + 1
 			acc = acc + dt
-			if acc >= 0.5 then
+			if acc >= 0.5 and label then
 				local ping = 0
 				pcall(function() ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue() end)
-				label.Text = string.format("FPS %d  |  %d ms", math.floor(frames / acc + 0.5), math.floor(ping + 0.5))
+				local fps = math.floor(frames / acc + 0.5)
+				label.Text = string.format("FPS %d  |  %d ms", fps, math.floor(ping + 0.5))
+				label.TextColor3 = fps < 30 and EYE or TXT
 				frames, acc = 0, 0
 			end
 		end)
 	else
-		if beatConn then beatConn:Disconnect(); beatConn = nil end
-		if dragConn then dragConn:Disconnect(); dragConn = nil end
-		if gui then gui:Destroy(); gui, label = nil, nil end
+		stop()
 	end
 end
-return setFpsCounter
+
+env.GengarFpsCleanup = stop
+return set
